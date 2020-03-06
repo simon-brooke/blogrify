@@ -1,22 +1,25 @@
 # blogrify
 
-A Clojure library designed to ... well, that part is up to you.
+A set of mainly Clojure hacks designed to migrate a blog off Blogger and into Markdown.
+
+## Discussion
+
+You probably don't want to use this.
+
+It's tooling to move my blog off Blogger and into Markdown format, in my case
+in order to serve it with [Smeagol](https://github.com/journeyman-cc/smeagol).
+Furthermore, this will almost certainly never by fully productised or
+documented. However, if you want to make us of it, you're welcome to do so.
 
 ## Usage
 
-FIXME
+Don't know yet.
 
 ## License
 
-Copyright © 2020 FIXME
+Copyright © 2020 Simon Brooke
 
-This program and the accompanying materials are made available under the
-terms of the Eclipse Public License 2.0 which is available at
-http://www.eclipse.org/legal/epl-2.0.
-
-This Source Code may also be made available under the following Secondary
-Licenses when the conditions for such availability set forth in the Eclipse
-Public License, v. 2.0 are satisfied: GNU General Public License as published by
+This Source Code is licensed under GNU General Public License as published by
 the Free Software Foundation, either version 2 of the License, or (at your
 option) any later version, with the GNU Classpath Exception which is available
 at https://www.gnu.org/software/classpath/license.html.
