@@ -45,13 +45,16 @@
                 (case (:tag e)
                   ;; this isn't working: images in anchors (which is all of them)
                   ;; now do not come through at all
-                  :a (when (and (-> e :attrs :href) (not (-> e :attrs :imageanchor)))
-                       (str "[" (cs/trim c) "](" (-> e :attrs :href) ")"))
+                  :a (when (-> e :attrs :href)
+                       (cond (-> e :attrs :imageanchor) (cs/trim c)
+                             (= (-> e :attrs :rel) "tag") (let [c' (cs/trim c)]
+                                                            (str "[" c' "](category?cat=" c' ")"))
+                             :else (str "[" (cs/trim c) "](" (-> e :attrs :href) ")")))
                   (:b :strong) (str "**" (cs/trim c) "**")
                   :br (when-not (= (first context) :td) "\n") ;; trust fucking Google to emit tag soup.
                   (:code :samp :var) (str "`" (cs/trim c) "`")
-                  :div (when-not
-                        (= (-> e :attrs :class) "post-footer")
+                  :div (case (-> e :attrs :class)
+                         "post-footer" nil
                          (when-not (empty? (cs/trim c)) ;; empty divs should not introduce vertical space.
                            (str "\n\n" c)))
                   :h1 (str "\n# " (cs/trim c) "\n\n")
@@ -66,7 +69,7 @@
                               (cs/trim
                                (or
                                 (-> e :attrs :alt)
-                                (-> e :attrs :title)
+                                ;; (-> e :attrs :title)
                                 (-> e :attrs :src)))
                               "]("
                               relative-image-url-path
@@ -78,6 +81,7 @@
                   :pre (str "```\n" c "\n```\n") ;; <<-- TODO this is not right
                   :span (case (-> e :attrs :class)
                           "post-icons" nil
+                          "post-labels" (str "\n\n#### " (cs/trim c) "\n\n")
                           c)
                   :table (str c' "\n\n")
                   (:tbody :thead) c'
@@ -110,13 +114,15 @@
   ;; something in the way I'm walking the directory structure may call
   ;; this function several times on the same file. This is a hack!
     (let [enlivened (debloggerise (html/html-resource (fs/file file-path)))
-          content (html/select enlivened  [:div.hentry])
+          content (html/select enlivened [:div.hentry])
           date-header (enlive->md (html/select enlivened [:h4.date-header]))
+          labels (enlive->md (html/select enlivened [:span.post-labels]))
           title (cs/trim (tidy-whitespace (enlive->md (:content (first (html/select content [:h1.post-title]))))))
           directory-path (subs (str file-path) 0 (cs/last-index-of (str file-path) "/"))
           output-name (str (cs/replace title #"[^a-zA-Z0-9 ]" "") ".md")
           output-path (fs/file "content" output-name)]
-      (spit output-path (str date-header (enlive->md content)))
+      (spit output-path
+            (str date-header (enlive->md content) labels))
       output-name)))
 
 
