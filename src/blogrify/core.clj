@@ -7,18 +7,31 @@
             [me.raynes.fs :as fs]
             [net.cgrand.enlive-html :as html]))
 
+; From John Gruber's http://daringfireball.net/2010/07/improved_regex_for_matching_urls
+; Added a capture group around the protocol so we can distinguish matches that contained it.
+(def url-regex
+  "I tried John Gruber's Liberal Pattern for Matching Web URLS
+   (https://gist.github.com/gruber/8891611), but this performed poorly and
+   seemed overkill. This is much simpler and will work in most cases." 
+  #"^https?:/{1,3}.*")
+
 
 (defn tidy-whitespace
+  "Remove, from `s`, expected to be a string or something else representing
+   unmarked text, anything which could be interpreted by Markdown as 
+   formatting."
   [s]
   (cond
-    (string? s) (cs/replace (cs/replace s #"  +" " ") "\n" " ")
+    (string? s) (cs/replace (cs/replace s #"[ \*\_\#]+" " ") "\n" " ")
     (seq? s) (cs/join " " (map tidy-whitespace s))
     :else (tidy-whitespace (str s))))
 
 
 (defn debloggerise
-  "Google's Blogger 'html' is the most appalling tag soup. This attempts to
-  sort out some of the worst infelicities."
+  "Extract the interesting bits out of this enlive-style structure `e `
+   representing Blogger tag soup. Google's Blogger 'html' is the most 
+   appalling tag soup. This attempts to sort out some of the worst 
+   infelicities."
   [e]
   (-> e
       (html/transform [:h2.date-header] #(assoc % :tag :h4))
@@ -30,10 +43,21 @@
                                (merge % {:tag :th :content (:content (first (:content %)))})
                                %))))
 
+(defn enlive->plain-text
+  "Convert the enlive-style structure `e `representing HTML markup, into
+   a plain text string."
+  ([e] (enlive->plain-text e nil))
+  ([e context]
+   (tidy-whitespace
+    (if (map? e)
+      (let [c (enlive->plain-text (:content e) (cons (:tag e) context))]
+        (cs/trim c))
+      e))))
 
 (defn enlive->md
-  "This could be worked into something general purpose, but for the moment it
-  is for Blogger tag soup only"
+  "Convert the enlive-style structure `e`, representing HTML markup, into a
+   markdown formatted string. This could be worked into something general 
+   purpose, but for the moment it is for Blogger tag soup only"
   ([e]
    (enlive->md e nil))
   ([e context]
@@ -65,16 +89,18 @@
                   (:i :em) (str "*" (cs/trim c) "*")
                   :img (when
                         (-> e :attrs :src)
-                         (str "!["
-                              (cs/trim
-                               (or
-                                (-> e :attrs :alt)
-                                ;; (-> e :attrs :title)
-                                (-> e :attrs :src)))
-                              "]("
+                         (let [alt (enlive->plain-text
+                                    (or
+                                     (-> e :attrs :alt)
+                                     (-> e :attrs :title)
+                                     (-> e :attrs :src)))
+                               alt' (if (re-matches url-regex alt) 
+                                      "(Image)" 
+                                      alt)]
+                           (str "![" alt' "]("
                               relative-image-url-path
                               (handle-image (-> e :attrs :src))
-                              ")"))
+                              ")")))
                   :li (str "\n" (if (= (first context) :ul) "*" "1.") " " c)
                   (:ol :ul) (str c "\n\n")
                   :p (str "\n\n" c)

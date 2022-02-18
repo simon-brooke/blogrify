@@ -1,30 +1,21 @@
 (ns blogrify.images
+  "Serving images from blogger's infrastructure makes no sense; ultimately
+   they will delete or at least archive them. We need to download those image
+   locally. At the same time we need to get rid of the crackers Blogger image
+   names.
+
+   It would be nice if we could guarantee that the names generated would be
+   the same on every run; an MD5 sum of the blogger name might be good enough."
   (:require [cemerick.url :refer [url]]
             [clojure.java.io :as io]
-            [clojure.java.shell :refer [sh]]
-            [clojure.pprint :refer [pprint]]
             [clojure.string :as cs]
-            [image-resizer.core :refer [resize]]
-            [image-resizer.scale-methods :as sm]
-            [image-resizer.util :refer :all]
             [me.raynes.fs :as fs]
-            [net.cgrand.enlive-html :as html]
             [taoensso.timbre :as log])
   (:import java.security.MessageDigest
            java.math.BigInteger
-           [java.io File]
-           [java.awt Image]
-           [java.awt.image RenderedImage BufferedImageOp]
+           [java.awt.image RenderedImage]
            [javax.imageio ImageIO ImageWriter ImageWriteParam IIOImage]
            [javax.imageio.stream FileImageOutputStream]))
-
-;; Serving images from blogger's infrastructure makes no sense; ultimately
-;; they will delete or at least archive them. We need to download those image
-;; locally. At the same time we need to get rid of the crackers Blogger image
-;; names.
-;;
-;; It would be nice if we could guarantee that the names generated would be
-;; the same on every run; an MD5 sum of the blogger name might be good enough.
 
 (def image-file-extns
   "Extensions of file types we will attempt to thumbnail. GIF is excluded
@@ -80,8 +71,9 @@
   "Map blogger-name -> our-name for images"
   (atom {}))
 
-(defn md5 [^String s]
-  "Stolen from https://gist.github.com/jizhang/4325757"
+(defn md5 
+  "Stolen shamelessly from https://gist.github.com/jizhang/4325757"
+  [^String s]
   (let [algorithm (MessageDigest/getInstance "MD5")
         raw (.digest algorithm (.getBytes s))]
     (format "%032x" (BigInteger. 1 raw))))
@@ -117,7 +109,7 @@
           (str "wget -O "
                (fs/absolute
                  (fs/file relative-image-directory n'))
-               " \""
+               "\\\n\t \""
                blogger-url "\"\n")
           :append true)
         (swap! images-map assoc blogger-url n')
