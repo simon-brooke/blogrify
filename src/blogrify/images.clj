@@ -82,6 +82,7 @@
   ;; Return our local name for the specified
   [url]
   (let [extn (subs url (cs/last-index-of url "."))]
+    ;; TODO: Fix the 'proxy' nonsense!
     (str (gensym "img") extn)))
 
 ;; (our-name-for "froboz.png")

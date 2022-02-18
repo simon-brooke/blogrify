@@ -53,7 +53,6 @@
   "Return `true` if and only if the enlive-style structure `e` appears to be
    a blogger image formatted as a table."
   [e]
-  (println (str "image-table? " e))
   (and
    (map? e)
    (= (-> e :attrs :class) "tr-caption-container")
