@@ -1,20 +1,22 @@
 (ns blogrify.core
-  (:require [blogrify.images :refer [relative-image-url-path handle-image]]
-            [blogrify.time-index :refer [date-index]]
+  (:require [blogrify.boots :refer [sanitise-image-table]]
+            [blogrify.images :refer [relative-image-url-path handle-image]]
+            [blogrify.time-index :refer [format-date-index]]
             [clojure.pprint :refer [pprint]]
             [clojure.string :as cs]
             [markdown.core :as md]
             [me.raynes.fs :as fs]
             [net.cgrand.enlive-html :as html]))
 
-; From John Gruber's http://daringfireball.net/2010/07/improved_regex_for_matching_urls
-; Added a capture group around the protocol so we can distinguish matches that contained it.
 (def url-regex
-  "I tried John Gruber's Liberal Pattern for Matching Web URLS
+  "I tried John Gruber's Liberal Pattern for Matching Web URLs
    (https://gist.github.com/gruber/8891611), but this performed poorly and
-   seemed overkill. This is much simpler and will work in most cases." 
+   seemed overkill. This is much simpler and will work in most cases."
   #"^https?:/{1,3}.*")
 
+(def ^:dynamic output-dir
+  "Where we will write output to."
+  "content")
 
 (defn tidy-whitespace
   "Remove, from `s`, expected to be a string or something else representing
@@ -94,13 +96,13 @@
                                      (-> e :attrs :alt)
                                      (-> e :attrs :title)
                                      (-> e :attrs :src)))
-                               alt' (if (re-matches url-regex alt) 
-                                      "(Image)" 
+                               alt' (if (re-matches url-regex alt)
+                                      "(Image)"
                                       alt)]
                            (str "![" alt' "]("
-                              relative-image-url-path
-                              (handle-image (-> e :attrs :src))
-                              ")")))
+                                relative-image-url-path
+                                (handle-image (-> e :attrs :src))
+                                ")")))
                   :li (str "\n" (if (= (first context) :ul) "*" "1.") " " c)
                   (:ol :ul) (str c "\n\n")
                   :p (str "\n\n" c)
@@ -109,7 +111,7 @@
                           "post-icons" nil
                           "post-labels" (str "\n\n#### " (cs/trim c) "\n\n")
                           c)
-                  :table (str c' "\n\n")
+                  :table (str (sanitise-image-table c') "\n\n")
                   (:tbody :thead) c'
                   :td (str (cs/trim c) " | ")
                   :th (str (cs/trim c) " | ")
@@ -144,9 +146,8 @@
           date-header (enlive->md (html/select enlivened [:h4.date-header]))
           labels (enlive->md (html/select enlivened [:span.post-labels]))
           title (cs/trim (tidy-whitespace (enlive->md (:content (first (html/select content [:h1.post-title]))))))
-          directory-path (subs (str file-path) 0 (cs/last-index-of (str file-path) "/"))
           output-name (str (cs/replace title #"[^a-zA-Z0-9 ]" "") ".md")
-          output-path (fs/file "content" output-name)]
+          output-path (fs/file output-dir output-name)]
       (spit output-path
             (str date-header (enlive->md content) labels))
       output-name)))
@@ -157,7 +158,8 @@
   (cond
     (fs/directory? file-path) (map mung-posts (fs/list-dir file-path))
     (fs/file? file-path) (mung-post file-path)
-    (string? file-path) (mung-posts (fs/file file-path))))
+    (string? file-path) (doall (mung-posts (fs/file file-path))
+                               (format-date-index output-dir))))
 
 ;; (cs/trim "\n  \n")
 

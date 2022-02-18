@@ -80,7 +80,7 @@
   [e]
   (and
    (map? e)
-   (= (:class e) "tr-caption-container")
+   (= (-> e :attrs :class) "tr-caption-container")
    (=
     :img
     (-> e

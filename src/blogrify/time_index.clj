@@ -1,7 +1,7 @@
 (ns blogrify.time-index
   "Index blog entries temporally"
   (:require [clojure.java.io :refer [as-file reader]]
-            [clojure.string :as s :refer [replace split]]
+            [clojure.string :as s :refer [ends-with? replace split]]
             [java-time :refer [format local-date]]
             [me.raynes.fs :as fs])
   (:import [java.nio.file Files FileSystems LinkOption]
@@ -38,7 +38,7 @@
    and return it as a `java.time.LocalDate` object."
   [file-path]
   (let [dl (nth (s/split (with-open [eddie (reader file-path)]
-                           (first (line-seq eddie)))
+                           (first (remove empty?(line-seq eddie))))
                          #" " 2) 1)]
     (try (local-date "EEEE, dd MMMM yyyy" dl)
          (catch Exception
@@ -66,7 +66,7 @@
             (remove
              nil?
              (map
-              #(try (vector (dateline (str %)) %)
+              #(try (when (ends-with? (str %) ".md")(vector (dateline (str %)) %))
                     (catch Exception any
                       ;; if we can't get a valid dateline, don't index it
                       ))
@@ -88,5 +88,5 @@
                  "]]")
            "# Index by date\n"
            (reverse (keys index)))]
-    (spit (str dir-path "/Index by date.md") f)
+    (spit (fs/file dir-path "Index by date.md") f)
     f))
