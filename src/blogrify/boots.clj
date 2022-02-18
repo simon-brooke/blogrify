@@ -1,5 +1,6 @@
 (ns blogrify.boots
-  "Sanitise images from tables which blogger classifies as `tr-caption-container`.")
+  "Sanitise images from tables which blogger classifies as `tr-caption-container`."
+  (require [blogrify.utils :refer [first-child format-image second-child tidy-whitespace]]))
 
 (def image-table
   "This is a sample of an image-table from Blogger, to use for testing a 
@@ -48,36 +49,11 @@
          :content ["Loveson boots, bought about 1984 and still good."]}]}
       "\n"]}]})
 
-
-(defmacro children
-  [e]
-  `(filter map? (:content ~e)))
-
-
-(defmacro first-child
-  "Return the first child element of the enlive-style structure `e`, if `e`
-   represents an XML element, else nil."
-  [e]
-  `(when (map? ~e)
-     (first (children ~e))))
-
-(defmacro nth-child
-  "Return the `n`th child element of the enlive-style structure `e`, if `e`
-   represents an XML element, else nil."
-  [e n]
-  `(when (map? ~e)
-     (nth (children ~e) ~n)))
-
-(defmacro second-child
-  "Return the second child element of the enlive-style structure `e`, if `e`
-   represents an XML element, else nil."
-  [e]
-  `(nth-child ~e 1))
-
 (defn image-table?
   "Return `true` if and only if the enlive-style structure `e` appears to be
    a blogger image formatted as a table."
   [e]
+  (println (str "image-table? " e))
   (and
    (map? e)
    (= (-> e :attrs :class) "tr-caption-container")
@@ -101,14 +77,14 @@
   "If the enlive-style structure `e` appears to be a blogger image formatted 
    as a table, extract the image and caption and return it; otherwise, return
    `e`."
-  [e]
+  [e relative-image-url-path]
   (if (image-table? e)
-    (assoc (-> e
-               first-child
-               first-child
-               first-child
-               first-child
-               first-child)
-           :alt
-           (str (extract-caption e)))
+    (format-image (-> e
+                      first-child
+                      first-child
+                      first-child
+                      first-child
+                      first-child)
+                  (extract-caption e)
+                  relative-image-url-path)
     e))

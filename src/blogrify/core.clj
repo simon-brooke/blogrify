@@ -2,9 +2,10 @@
   (:require [blogrify.boots :refer [sanitise-image-table]]
             [blogrify.images :refer [relative-image-url-path handle-image]]
             [blogrify.time-index :refer [format-date-index]]
-            [clojure.pprint :refer [pprint]]
+            [blogrify.utils :refer [enlive->plain-text tidy-whitespace]]
+            ;; [clojure.pprint :refer [pprint]]
             [clojure.string :as cs]
-            [markdown.core :as md]
+            ;; [markdown.core :as md]
             [me.raynes.fs :as fs]
             [net.cgrand.enlive-html :as html]))
 
@@ -17,17 +18,6 @@
 (def ^:dynamic output-dir
   "Where we will write output to."
   "content")
-
-(defn tidy-whitespace
-  "Remove, from `s`, expected to be a string or something else representing
-   unmarked text, anything which could be interpreted by Markdown as 
-   formatting."
-  [s]
-  (cond
-    (string? s) (cs/replace (cs/replace s #"[ \*\_\#]+" " ") "\n" " ")
-    (seq? s) (cs/join " " (map tidy-whitespace s))
-    :else (tidy-whitespace (str s))))
-
 
 (defn debloggerise
   "Extract the interesting bits out of this enlive-style structure `e `
@@ -44,17 +34,6 @@
                                (= (:tag (first (:content %))) :b))
                                (merge % {:tag :th :content (:content (first (:content %)))})
                                %))))
-
-(defn enlive->plain-text
-  "Convert the enlive-style structure `e `representing HTML markup, into
-   a plain text string."
-  ([e] (enlive->plain-text e nil))
-  ([e context]
-   (tidy-whitespace
-    (if (map? e)
-      (let [c (enlive->plain-text (:content e) (cons (:tag e) context))]
-        (cs/trim c))
-      e))))
 
 (defn enlive->md
   "Convert the enlive-style structure `e`, representing HTML markup, into a
@@ -111,7 +90,7 @@
                           "post-icons" nil
                           "post-labels" (str "\n\n#### " (cs/trim c) "\n\n")
                           c)
-                  :table (str (sanitise-image-table c') "\n\n")
+                  :table (str (sanitise-image-table e relative-image-url-path) "\n\n")
                   (:tbody :thead) c'
                   :td (str (cs/trim c) " | ")
                   :th (str (cs/trim c) " | ")
@@ -152,14 +131,20 @@
             (str date-header (enlive->md content) labels))
       output-name)))
 
-
 (defn mung-posts
-  [file-path]
-  (cond
-    (fs/directory? file-path) (map mung-posts (fs/list-dir file-path))
-    (fs/file? file-path) (mung-post file-path)
-    (string? file-path) (doall (mung-posts (fs/file file-path))
-                               (format-date-index output-dir))))
+  "Process all files below this `file-path`. If `initialise?` is `true`, 
+   smash and recreate the `wget-requests.sh` file before starting."
+  ([file-path initialise?]
+   (when (true? initialise?)
+     (doall
+      (spit "wget-requests.sh" "")
+      (mung-posts file-path))))
+  ([file-path]
+   (cond
+     (fs/directory? file-path) (map mung-posts (fs/list-dir file-path))
+     (fs/file? file-path) (mung-post file-path)
+     (string? file-path) (doall (mung-posts (fs/file file-path))
+                                (format-date-index output-dir)))))
 
 ;; (cs/trim "\n  \n")
 
