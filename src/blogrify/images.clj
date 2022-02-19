@@ -79,13 +79,13 @@
     (format "%032x" (BigInteger. 1 raw))))
 
 (defn our-name-for
-  ;; Return our local name for the specified
+  "Return our local name for the specified `url`"
   [url]
-  (let [extn (subs url (cs/last-index-of url "."))]
-    ;; TODO: Fix the 'proxy' nonsense!
+  (let [extn (first (cs/split (subs url (cs/last-index-of url ".")) #"/"))]
     (str (gensym "img") extn)))
 
 ;; (our-name-for "froboz.png")
+;; (our-name-for "froboz.png/proxy/some/shitty/nonsense/from/blogger")
 
 (defn ensure-image-directory
   []

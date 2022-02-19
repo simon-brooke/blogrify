@@ -134,11 +134,11 @@
 (defn mung-posts
   "Process all files below this `file-path`. If `initialise?` is `true`, 
    smash and recreate the `wget-requests.sh` file before starting."
-  ([file-path initialise?]
-   (when (true? initialise?)
-     (doall
-      (spit "wget-requests.sh" "")
-      (mung-posts file-path))))
+  ;; ([file-path initialise?]
+  ;;  (when (true? initialise?)
+  ;;    (doall
+  ;;     (spit "wget-requests.sh" "")
+  ;;     (mung-posts file-path))))
   ([file-path]
    (cond
      (fs/directory? file-path) (map mung-posts (fs/list-dir file-path))
